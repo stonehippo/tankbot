@@ -24,8 +24,8 @@ void warn(String message) {
 }
 
 void startLog() {
+  Serial.begin(57600); // the max rate for a 3.3/8MHz Arduino is 57600, not 115200
   if (DEBUG) {
-    Serial.begin(115200);
     info("Now logging to serial");
   }
 }
