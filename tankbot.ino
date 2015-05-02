@@ -3,6 +3,8 @@
 #include <FiniteStateMachine.h>
 #include <SPI.h>
 #include <aREST.h>
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
 #include "LogHelpers.h"
 #include "TimingHelpers.h"
 
@@ -19,7 +21,24 @@ FSM stateMachine = FSM(startupState);
 
 aREST rest = aREST();
 
+// PWM driver board
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+// define PWM channels that will tie to the motor driver board
+const byte MOTOR_A_PWM_CHANNEL = 0;
+const byte MOTOR_A_FORWARD_CHANNEL = 1;
+const byte MOTOR_A_REVERSE_CHANNEL = 2;
+
+const byte MOTOR_B_PWM_CHANNEL = 4;
+const byte MOTOR_B_FORWARD_CHANNEL = 5;
+const byte MOTOR_B_REVERSE_CHANNEL = 6;
+
+const byte MOTOR_STANDBY_CHANNEL = 7;
+
 void setup() {
+  pwm.begin();
+  pwm.setPWMFreq(1600);
+  
   startLog(); // starts Serial, and prints a message if DEBUG is enabled
 }
 
@@ -103,15 +122,29 @@ int setControlState(String command) {
 // disable the motors via the motor driver STANDBY
 void allStop() {
   warn(F("enabling STANDBY"));
+  pwm.setPWM(MOTOR_STANDBY_CHANNEL, 0, 0);
 }
 // disable the motors via the motor driver STANDBY
 void allStart() {
   warn(F("disabling STANDBY"));
+  pwm.setPWM(MOTOR_STANDBY_CHANNEL, 0, 4095);
 }
 void allSpeedAhead() {
   warn(F("moving forward"));
+  pwm.setPWM(MOTOR_A_PWM_CHANNEL, 0, 4095); // appromixmately 50% speed
+  pwm.setPWM(MOTOR_B_PWM_CHANNEL, 0, 4095); // appromixmately 50% speed
+  pwm.setPWM(MOTOR_A_FORWARD_CHANNEL, 0, 4095);
+  pwm.setPWM(MOTOR_A_REVERSE_CHANNEL, 0, 0);
+  pwm.setPWM(MOTOR_B_FORWARD_CHANNEL, 0, 4095);
+  pwm.setPWM(MOTOR_B_REVERSE_CHANNEL, 0, 0);
 }
 void allSpeedReverse() {
   warn(F("moving backward"));
+  pwm.setPWM(MOTOR_A_PWM_CHANNEL, 0, 4095); // appromixmately 50% speed
+  pwm.setPWM(MOTOR_B_PWM_CHANNEL, 0, 4095); // appromixmately 50% speed
+  pwm.setPWM(MOTOR_A_FORWARD_CHANNEL, 0, 0);
+  pwm.setPWM(MOTOR_A_REVERSE_CHANNEL, 0, 4095);
+  pwm.setPWM(MOTOR_B_FORWARD_CHANNEL, 0, 0);
+  pwm.setPWM(MOTOR_B_REVERSE_CHANNEL, 0, 4095);
 }
 
