@@ -1,3 +1,5 @@
+// put aREST in lightweight mode to reduce program size
+#define LIGHTWEIGHT 1
 #include <FiniteStateMachine.h>
 #include <SPI.h>
 #include <aREST.h>
@@ -47,8 +49,8 @@ void leaveStartupState() {
 
 // -------------- Idle State ---------------
 void enterIdleState() {
-  info(F("Idling, ready for commands..."));
   allStop();
+  info(F("Idling, ready for commands..."));
 }
 void updateIdleState() {}
 void leaveIdleState() {}
@@ -61,9 +63,7 @@ void enterForwardState() {
   allSpeedAhead();
 }
 void updateForwardState() {}
-void leaveForwardState() {
-  allStop();
-}
+void leaveForwardState() {}
 
 // -------------- Backward State ---------------
 
@@ -73,9 +73,7 @@ void enterBackwardState() {
   allSpeedReverse();
 }
 void updateBackwardState() {}
-void leaveBackwardState() {
-  allStop();
-}
+void leaveBackwardState() {}
 
 
 // ******************* HELPERS *******************
