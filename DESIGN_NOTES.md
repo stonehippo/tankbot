@@ -6,7 +6,7 @@ I also wanted to add some autonomous features to tankbot, or at least sensors th
 
 One issue that I've run up against has been the limitation of the microcontroller that I selected to be the brains of Tankbot. For various reasons, I selected the Arduino platform as the basis of the bot. Arduinos are fairly cheap, there's a ton of hardware and software support for them, and I happen to have several versions of the boards around in various form factors.
 
-The core of the original Arduino is an Atmel ATMega microcontroller, specifically the ATMega328 (at least in most modern versions). The ATMega328 is a versatile and pretty capable microcontroller. It is simple enough to be the foundation of a platform for hobby-level work. It is powerful enough to handle lots of tasks. But it does have some constraints.
+The core of the original Arduino is an Atmel ATmega microcontroller, specifically the ATmega328 (at least in most modern versions). The ATmega328 is a versatile and pretty capable microcontroller. It is simple enough to be the foundation of a platform for hobby-level work. It is powerful enough to handle lots of tasks. But it does have some constraints.
 
 
 ## Pins, pins, who's got some pins?
@@ -25,13 +25,13 @@ I now have a solution that frees up pins, gives me the basis of an I2C network f
 
 ## A tiny memory issue
 
-The next constraint that I ran afoul of is memory. The ATMega328 is fairly capable, but one thing it doesn't have is a lot of room to work in. One place where the ATMega can get a bit snug is dynamic memory (where the work happens) and program space. The ATMeage328 only has ~30K or so of program space. A bit more can be made available, depending on which bootloader you use or by forgoing a bootloader entirely, but the hardware roof for storing stuff in 32K.
+The next constraint that I ran afoul of is memory. The ATmega328 is fairly capable, but one thing it doesn't have is a lot of room to work in. One place where the ATmega can get a bit snug is dynamic memory (where the work happens) and program space. The ATMeage328 only has ~30K or so of program space. A bit more can be made available, depending on which bootloader you use or by forgoing a bootloader entirely, but the hardware roof for storing stuff in 32K.
 
-In addition, the ATMega328 on has 2K of dynamic, working memory.
+In addition, the ATmega328 on has 2K of dynamic, working memory.
 
 For many things, this is fine. But for Tankbot, we start to run into some issues quickly. The pressure comes largely from the libraries that I'm using to support the functions that makes up the bot. There's a library for the PWM board, a library for the finite state machine that manages the robots functions, a library the communicatoins module.
 
-It's that last one the really seems to be the biggest issue. I've implemented to comm modules, one using a nRF8001 Bluetooth LE board and the other using the CC3000 Wifi module. And both of these come with large libraries, relative to the capacities in the ATMega. I found that the nRF8001 library left decent space in program storage, but it eats up a lot of dyanmic memory. The CC3000 library is lightly better on dynamic memeory use but take a big chunk of the storage space.
+It's that last one the really seems to be the biggest issue. I've implemented to comm modules, one using a nRF8001 Bluetooth LE board and the other using the CC3000 Wifi module. And both of these come with large libraries, relative to the capacities in the ATmega. I found that the nRF8001 library left decent space in program storage, but it eats up a lot of dyanmic memory. The CC3000 library is lightly better on dynamic memeory use but take a big chunk of the storage space.
 
 I don't have a solution for that, but there are several options I could try (this isn't an exhaustive list):
 
@@ -39,4 +39,8 @@ I don't have a solution for that, but there are several options I could try (thi
 * Move up tp a more capable Arduino model, such as the Mega
 * Split up the functions of the bot and handle them with multiple microcontrollers
 
-I'm learning towards that last solution. I have a lot of Arduinos sitting around – let's just say that I've taken advantage of the Sparkfun Arduino Day sale for the past couple of years – so I'm thinkin that what I might do is make one the communications controller, letting it handle the wireless communication, and it can prompt it's sibling controller via a serial interface. I could also use other boards: I've got a few ESP8266 wifi modules around that would be good candidate, I think. 
+I'm learning towards that last solution. I have a lot of Arduinos sitting around – let's just say that I've taken advantage of the Sparkfun Arduino Day sale for the past couple of years – so I'm thinkin that what I might do is make one the communications controller, letting it handle the wireless communication, and it can prompt it's sibling controller via a serial interface. I could also use other boards: I've got a few ESP8266 wifi modules around that would be good candidate, I think.
+
+### An aside
+
+I just took a look at the offical [Arduno Robot](http://www.arduino.cc/en/Main/Robot), and it seems they take the multiple MCU approach as well. In that design, both the Control and Motor boards have their own ATmega32u4 MCUs. The board communicate with each other via serial, which is pretty much how I'd like to do it, too. If I stick with the nRF8001 or CC3000 boards for communications, they'll use SPI on the control MCU, leaving the hardware serial available to talk to the motor MCU. Assuming that I can keep the communication protocol between to two halves of the Tankbot brain fairly lightweight, the design gets more capacity for sensors and actuators, too.
