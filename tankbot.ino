@@ -2,6 +2,7 @@
 #define LIGHTWEIGHT 1
 #include <FiniteStateMachine.h>
 #include <SPI.h>
+#include "Adafruit_BLE_UART.h"
 #include <aREST.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
@@ -20,6 +21,17 @@ State backwardState = State(enterBackwardState, updateBackwardState, leaveBackwa
 FSM stateMachine = FSM(startupState);  
 
 aREST rest = aREST();
+
+// Pin configs for the Adafruit nrf8001 breakout board
+const byte BLE_REQUEST = 10;
+const byte BLE_READY = 2;
+const byte BLE_RESET = 9;
+
+// Create a Bluetooth LE UART instance to set up the basic connection
+Adafruit_BLE_UART BluetoothLESerial = Adafruit_BLE_UART(BLE_REQUEST, BLE_READY, BLE_RESET);
+
+// Global to monitor the state of the nrf8001 Bluetooth board
+aci_evt_opcode_t bleLastStatus = ACI_EVT_DISCONNECTED;
 
 // PWM driver board
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
@@ -40,11 +52,34 @@ void setup() {
   pwm.setPWMFreq(1600);
   
   startLog(); // starts Serial, and prints a message if DEBUG is enabled
+  BluetoothLESerial.begin();
 }
 
 void loop() {
+  // What's up, Bluetooth?
+  BluetoothLESerial.pollACI();
+  //check the status of the Bluetooth LE connection
+  aci_evt_opcode_t bleStatus = BluetoothLESerial.getState();
+  if (bleStatus != bleLastStatus) {
+    if (bleStatus == ACI_EVT_DEVICE_STARTED) {
+      info("BLE advertising started");
+    }
+    if (bleStatus == ACI_EVT_CONNECTED) {
+      info("BLE connected");
+    }
+    if (bleStatus == ACI_EVT_DISCONNECTED) {
+      info("BLE disconnected");
+    }
+    bleLastStatus = bleStatus;
+  }
+  
+  // Time to handle the state machine
   stateMachine.update();
-  rest.handle(Serial);
+  
+  // deal wih any REST calls
+  if (bleStatus == ACI_EVT_CONNECTED) {
+    rest.handle(BluetoothLESerial);
+  }
 }
 
 // ******************* FSM state callback methods *******************
