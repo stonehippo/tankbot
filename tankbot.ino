@@ -1,12 +1,14 @@
 // put aREST in lightweight mode to reduce program size
 #define LIGHTWEIGHT 1
 #include <FiniteStateMachine.h>
+#include <Adafruit_CC3000.h>
 #include <SPI.h>
 #include <aREST.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 #include "LogHelpers.h"
 #include "TimingHelpers.h"
+#include "wlan.h" // put your 
 
 // disable debug output
 #define DEBUG true
@@ -18,6 +20,27 @@ State forwardState = State(enterForwardState, updateForwardState, leaveForwardSt
 State backwardState = State(enterBackwardState, updateBackwardState, leaveBackwardState);
 
 FSM stateMachine = FSM(startupState);  
+
+// These are the pins for the CC3000 chip if you are using a breakout board
+#define ADAFRUIT_CC3000_IRQ   3
+#define ADAFRUIT_CC3000_VBAT  5
+#define ADAFRUIT_CC3000_CS    10
+
+// Create CC3000 instance
+Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT, SPI_CLOCK_DIV2);
+
+/*
+  Your WiFi SSID and password
+  don't actually do this here. Create a local wlan.h and put these #defines in it. That file will be excluded
+  from commits to github, for privacy and security reasons. Remember, never commit security secrets to a public
+  repo!
+*/
+// #define WLAN_SSID       "yourSSID"
+// #define WLAN_PASS       "yourPassword"
+// #define WLAN_SECURITY   WLAN_SEC_WPA2
+
+#define LISTEN_PORT  80
+Adafruit_CC3000_Server restServer(LISTEN_PORT);
 
 aREST rest = aREST();
 
@@ -40,11 +63,32 @@ void setup() {
   pwm.setPWMFreq(1600);
   
   startLog(); // starts Serial, and prints a message if DEBUG is enabled
+  
+  if (!cc3000.begin())
+  {
+    while(1);
+  }
+  if (!cc3000.connectToAP(WLAN_SSID, WLAN_PASS, WLAN_SECURITY)) {
+    while(1);
+  }
+  while (!cc3000.checkDHCP())
+  {
+    delay(100);
+  }
+  
+  while (! displayConnectionDetails()) {
+    delay(1000);
+  }
+  
+  restServer.begin();
 }
 
 void loop() {
   stateMachine.update();
-  rest.handle(Serial);
+  
+  // Handle REST calls
+  Adafruit_CC3000_ClientRef client = restServer.available();
+  rest.handle(client);
 }
 
 // ******************* FSM state callback methods *******************
@@ -117,6 +161,27 @@ int setControlState(String command) {
 }
 
 // ******************* HELPERS *******************
+
+bool displayConnectionDetails(void)
+{
+  uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;
+  
+  if(!cc3000.getIPAddress(&ipAddress, &netmask, &gateway, &dhcpserv, &dnsserv))
+  {
+    Serial.println(F("Unable to retrieve the IP Address!\r\n"));
+    return false;
+  }
+  else
+  {
+    Serial.print(F("\nIP Addr: ")); cc3000.printIPdotsRev(ipAddress);
+    Serial.print(F("\nNetmask: ")); cc3000.printIPdotsRev(netmask);
+    Serial.print(F("\nGateway: ")); cc3000.printIPdotsRev(gateway);
+    Serial.print(F("\nDHCPsrv: ")); cc3000.printIPdotsRev(dhcpserv);
+    Serial.print(F("\nDNSserv: ")); cc3000.printIPdotsRev(dnsserv);
+    Serial.println();
+    return true;
+  }
+}
 
 // -------------- Motor Driver Helpers ---------------
 // disable the motors via the motor driver STANDBY
