@@ -1,12 +1,14 @@
 // put aREST in lightweight mode to reduce program size
 #define LIGHTWEIGHT 1
+#include <Arduino.h>
+#include "tankbot.h"
 #include <FiniteStateMachine.h>
 #include <SPI.h>
 #include <aREST.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
-#include "LogHelpers.h"
-#include "TimingHelpers.h"
+#include "helpers/LogHelpers.h"
+#include "helpers/TimingHelpers.h"
 
 // disable debug output
 #define DEBUG true
@@ -15,7 +17,7 @@
 State startupState = State(enterStartupState,updateStartupState,leaveStartupState);
 State idleState = State(enterIdleState,updateIdleState,leaveIdleState);
 State forwardState = State(enterForwardState, updateForwardState, leaveForwardState);
-State backwardState = State(enterBackwardState, updateBackwardState, leaveBackwardState);
+State reverseState = State(enterReverseState, updateReverseState, leaveReverseState);
 
 FSM stateMachine = FSM(startupState);  
 
@@ -87,12 +89,12 @@ void leaveForwardState() {}
 // -------------- Backward State ---------------
 
 // Move the bot backward at full speed
-void enterBackwardState() {
+void enterReverseState() {
   allStart();
   allSpeedReverse();
 }
-void updateBackwardState() {}
-void leaveBackwardState() {}
+void updateReverseState() {}
+void leaveReverseState() {}
 
 
 // ******************* HELPERS *******************
@@ -110,7 +112,7 @@ int setControlState(String command) {
      return 3;
   }
   if (command.startsWith("backward")) {
-     stateMachine.transitionTo(backwardState);
+     stateMachine.transitionTo(reverseState);
      return 4;
   }
   return 1; 
